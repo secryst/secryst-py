@@ -1,4 +1,4 @@
-"""interscript-ml — the Python runtime for Interscript Model Format (IMF v1).
+"""secryst — the Python crystal (reference runtime) for the interscript-ml
 
 The reference implementation: the Ruby and TypeScript runtimes are
 diffed against this one on shared golden sets.
@@ -15,11 +15,12 @@ from __future__ import annotations
 
 from secryst.loader import Manifest, ModelFormatError
 from secryst.model import Model
-from secryst.registry import RegistryError, resolve
+from secryst.registry import RegistryError, cache_dir, load_index, resolve
 from secryst.tokens import BYTE_OFFSET, EOS_ID, PAD_ID, UNK_ID, decode, encode
 
 __all__ = [
     "BYTE_OFFSET",
+    "cache_dir",
     "EOS_ID",
     "Manifest",
     "Model",
@@ -28,6 +29,7 @@ __all__ = [
     "RegistryError",
     "UNK_ID",
     "decode",
+    "load_index",
     "encode",
     "resolve",
 ]
