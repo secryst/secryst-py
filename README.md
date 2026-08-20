@@ -6,7 +6,7 @@ script to reveal its hidden reading. This package is the Python crystal.
 The Python crystal — reference implementation of **IMF v1** model zips
 and the `models.yaml` index (the **interscript-ml** contract), the
 phonological layer of Interscript. The Ruby (`secryst` gem) and
-TypeScript (`@secryst/ml`) crystals are diffed against this one on
+TypeScript (`npm i secryst`) crystals are diffed against this one on
 shared golden sets. This crystal owns golden generation and numerical
 adjudication for the family.
 
