@@ -11,7 +11,7 @@ shared golden sets. This crystal owns golden generation and numerical
 adjudication for the family.
 
 Home repo: https://github.com/secryst/secryst-py (this copy in
-ml-models/runtime is the frozen origin; the package now lives there).
+interscript-ml/runtime is the frozen origin; the package now lives there).
 
 ```python
 from secryst import Model
