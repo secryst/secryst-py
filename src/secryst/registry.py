@@ -8,6 +8,8 @@ sha256-verify + atomically install into the cache.
 from __future__ import annotations
 
 import hashlib
+import re
+import urllib.error
 import os
 import shutil
 import tempfile
@@ -19,7 +21,7 @@ from urllib.parse import urlparse
 import yaml
 
 DEFAULT_INDEX_URL = (
-    "https://raw.githubusercontent.com/interscript/interscript-ml/main/models.yaml"
+    "https://github.com/interscript/interscript-ml/releases/download/index-v1/models-index.yaml"
 )
 ENV_INDEX = "SECRYST_INDEX"
 ENV_CACHE = "SECRYST_CACHE"
@@ -54,11 +56,30 @@ def cache_dir() -> Path:
     return Path.home() / ".cache" / "secryst"
 
 
+def _fetch_http_with_sidecar(url: str) -> str:
+    """HTTP sources must ship a sibling .sha256 sidecar; verify before parsing."""
+    with urllib.request.urlopen(url) as response:
+        body = response.read()
+    try:
+        with urllib.request.urlopen(f"{url}.sha256") as response:
+            sidecar = response.read().decode("utf-8").strip()
+    except urllib.error.HTTPError as exc:
+        raise RegistryError(f"index sha256 sidecar missing: {url}.sha256 -> {exc.code}") from exc
+    expected = sidecar.split()[0] if sidecar else ""
+    if not re.fullmatch(r"[0-9a-fA-F]{64}", expected):
+        raise RegistryError(f"index sha256 sidecar malformed: {url}.sha256")
+    actual = hashlib.sha256(body).hexdigest()
+    if actual != expected.lower():
+        raise RegistryError(
+            f"index sha256 mismatch: got {actual}, sidecar says {expected.lower()}"
+        )
+    return body.decode("utf-8")
+
+
 def load_index(index_url: str | None = None) -> dict[str, IndexEntry]:
     source = index_url or os.environ.get(ENV_INDEX) or DEFAULT_INDEX_URL
     if source.startswith(("http://", "https://")):
-        with urllib.request.urlopen(source) as response:
-            text = response.read().decode("utf-8")
+        text = _fetch_http_with_sidecar(source)
     else:
         text = Path(source).read_text(encoding="utf-8")
     raw = yaml.safe_load(text)
