@@ -168,3 +168,72 @@ def test_resolve_parts_rejects_corrupt_part(tmp_path: Path) -> None:
             resolve("tiny-1.0", index_url=str(index_path))
     finally:
         os.environ.pop("SECRYST_CACHE", None)
+
+
+def test_default_index_url_pins_github_release() -> None:
+    import re as _re
+
+    from secryst.registry import DEFAULT_INDEX_URL
+
+    assert _re.fullmatch(
+        r"https://github\.com/interscript/interscript-ml/releases/download/index-v\d+/models-index\.yaml",
+        DEFAULT_INDEX_URL,
+    )
+    assert "raw.githubusercontent" not in DEFAULT_INDEX_URL
+
+
+def test_http_index_requires_valid_sha256_sidecar(monkeypatch, tmp_path) -> None:
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from secryst.registry import load_index
+
+    body = b"version: 1\nmodels: {}\n"
+    good = hashlib.sha256(body).hexdigest()
+    bad = "0" * 64
+
+    class Handler(BaseHTTPRequestHandler):
+        sidecar: str | None = None
+
+        def do_GET(self):  # noqa: N802
+            if self.path == "/models-index.yaml":
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if self.path == "/models-index.yaml.sha256":
+                if Handler.sidecar is None:
+                    self.send_response(404)
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+                payload = f"{Handler.sidecar}  models-index.yaml\n".encode()
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *args):  # silence
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{port}/models-index.yaml"
+    try:
+        Handler.sidecar = good
+        assert load_index(url) == {}
+        Handler.sidecar = bad
+        with pytest.raises(RegistryError, match="index sha256 mismatch"):
+            load_index(url)
+        Handler.sidecar = None
+        with pytest.raises(RegistryError, match="index sha256"):
+            load_index(url)
+    finally:
+        server.shutdown()
