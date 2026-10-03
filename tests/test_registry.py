@@ -171,13 +171,14 @@ def test_resolve_parts_rejects_corrupt_part(tmp_path: Path) -> None:
 
 
 def test_default_index_url_pins_github_release() -> None:
-    import re as _re
-
+    # exact pin (not index-v\d+): the default must resolve every model
+    # the distribution contract has shipped, incl. static-int8 (v6).
+    # Bump this test WITH the registry constant, never ahead of it.
     from secryst.registry import DEFAULT_INDEX_URL
 
-    assert _re.fullmatch(
-        r"https://github\.com/interscript/interscript-ml/releases/download/index-v\d+/models-index\.yaml",
-        DEFAULT_INDEX_URL,
+    assert DEFAULT_INDEX_URL == (
+        "https://github.com/interscript/interscript-ml"
+        "/releases/download/index-v6/models-index.yaml"
     )
     assert "raw.githubusercontent" not in DEFAULT_INDEX_URL
 
