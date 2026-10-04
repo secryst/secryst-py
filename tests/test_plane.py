@@ -18,13 +18,12 @@ import pytest
 
 pytest.importorskip("onnx")
 pytest.importorskip("onnxruntime")
-import numpy as np  # noqa: E402
-import onnx  # noqa: E402
-from onnx import TensorProto, helper, numpy_helper  # noqa: E402
+import numpy as np
+from onnx import TensorProto, helper, numpy_helper
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from secryst.plane import PlaneModel, render_plane  # noqa: E402
+from secryst.plane import PlaneModel, render_plane
 
 N_CLASSES = 4
 CLASSES = ["", "َ", "ُ", "ْ"]
