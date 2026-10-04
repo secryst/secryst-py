@@ -51,3 +51,42 @@ class PlaneModel:
             char_classes.append(self.classes[cid] if cid < self.n_classes else "")
             pos += n
         return render_plane(text, char_classes)
+
+
+def from_zip(data: bytes) -> PlaneModel:
+    """Load a plane artifact zip: metadata.yaml (id, precision, kind,
+    k_passes, classes, member sha256s) + plane.onnx + classes.json.
+    Every member is sha256-verified before the session is created."""
+    import hashlib
+    import io
+    import json as _json
+    import zipfile
+
+    import yaml
+
+    zf = zipfile.ZipFile(io.BytesIO(data))
+    names = set(zf.namelist())
+    if "metadata.yaml" not in names:
+        raise ValueError("plane zip: metadata.yaml missing")
+    meta = yaml.safe_load(zf.read("metadata.yaml"))
+    if meta.get("kind") != "plane":
+        raise ValueError(f"plane zip: kind={meta.get('kind')!r}, expected 'plane'")
+    members = meta.get("members") or {}
+    for member in ("plane.onnx", "classes.json"):
+        if member not in names:
+            raise ValueError(f"plane zip: {member} missing")
+        want = members.get(member)
+        got = hashlib.sha256(zf.read(member)).hexdigest()
+        if want is not None and want != got:
+            raise ValueError(f"plane zip: {member} sha256 mismatch ({got})")
+        if want is None:
+            raise ValueError(f"plane zip: {member} has no sha256 in metadata")
+    classes = _json.loads(zf.read("classes.json"))
+    return PlaneModel(
+        graph=zf.read("plane.onnx"),
+        classes=classes,
+        k_passes=int(meta.get("k_passes", 2)),
+    )
+
+
+PlaneModel.from_zip = staticmethod(from_zip)
