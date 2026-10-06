@@ -1,3 +1,9 @@
+# DEPRECATED
+
+This package has moved: use **`interscript`** (PyPI) with the `[ml]` extra - the secryst runtime is now `interscript.ml`.
+
+---
+
 # secryst — Python crystal
 
 **Secryst** is coined from *scrying* + *crystal*: gazing into an opaque
